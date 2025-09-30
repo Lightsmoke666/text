@@ -799,7 +799,7 @@ Tabs.Fight:Button({
         WindUI:Notify({
                 Title = "当前状态信息",
                 Desc = "当前护甲值:, armor,当前血量:, math.floor(health) .. "/" .. math.floor(maxHealth)),选择的护甲类型:, jiahit"
-                Icon = "📊",
+                Icon = "star",
                 Duration = 3
             })
     end
