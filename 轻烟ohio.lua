@@ -781,6 +781,30 @@ Tabs.Fight:Toggle({
     end
 })
 
+-- 护甲状态显示（可选功能）
+Tabs.Fight:Button({
+    Title = "检查护甲状态",
+    Desc = "显示当前护甲和血量信息",
+    Callback = function()
+        local armor = LocalPlayer:GetAttribute('armor') or 0
+        local character = LocalPlayer.Character
+        local health = 0
+        local maxHealth = 0
+        
+        if character and character:FindFirstChild("Humanoid") then
+            health = character.Humanoid.Health
+            maxHealth = character.Humanoid.MaxHealth
+        end
+        
+        print("📊 角色状态信息:")
+        print("   当前护甲值:", armor)
+        print("   当前血量:", math.floor(health) .. "/" .. math.floor(maxHealth))
+        print("   选择的护甲类型:", jiahit)
+        
+        -- 可以在UI中显示这些信息
+        -- 或者使用WindUI的通知功能
+    end
+})
 
 RunService.Heartbeat:Connect(function()
     pcall(function()
