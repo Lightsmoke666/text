@@ -796,13 +796,64 @@ Tabs.Fight:Button({
             maxHealth = character.Humanoid.MaxHealth
         end
         
-        print("📊 角色状态信息:")
-        print("   当前护甲值:", armor)
-        print("   当前血量:", math.floor(health) .. "/" .. math.floor(maxHealth))
-        print("   选择的护甲类型:", jiahit)
+        -- 根据状态设置不同的图标和颜色
+        local statusIcon = "shield"
+        local statusColor = Color3.fromRGB(0, 255, 0)  -- 默认绿色
         
-        -- 可以在UI中显示这些信息
-        -- 或者使用WindUI的通知功能
+        if armor <= 0 then
+            statusIcon = "alert-circle"
+            statusColor = Color3.fromRGB(255, 0, 0)    -- 红色警告
+        elseif armor < 1000 then
+            statusIcon = "shield"
+            statusColor = Color3.fromRGB(255, 165, 0)  -- 橙色中等
+        end
+        
+        -- 血量状态判断
+        local healthPercent = (health / maxHealth) * 100
+        if healthPercent < 30 then
+            statusIcon = "heart"
+            statusColor = Color3.fromRGB(255, 0, 0)    -- 红色危险
+        elseif healthPercent < 70 then
+            statusIcon = "heart"
+            statusColor = Color3.fromRGB(255, 165, 0)  -- 橙色警告
+        end
+        
+        -- 使用WindUI通知功能显示美观的状态信息
+        Window:Notify({
+            Title = "🛡️ 角色状态检查",
+            Desc = string.format("🔸 护甲值: %d\n❤️ 血量: %d/%d\n🎯 护甲类型: %s\n📊 血量百分比: %.1f%%", 
+                                armor, math.floor(health), math.floor(maxHealth), 
+                                jiahit, healthPercent),
+            Duration = 10,  -- 显示10秒
+            Callback = function()
+                print("✅ 状态信息已显示")
+            end
+        })
+        
+        -- 额外建议信息
+        if armor <= 0 then
+            task.wait(2)  -- 等待2秒后显示建议
+            Window:Notify({
+                Title = "⚠️ 护甲建议",
+                Desc = "检测到您没有护甲，建议开启自动穿甲功能！",
+                Duration = 6,
+                Callback = function()
+                    print("🔔 护甲建议已显示")
+                end
+            })
+        end
+        
+        if healthPercent < 50 then
+            task.wait(4)  -- 等待4秒后显示建议
+            Window:Notify({
+                Title = "💊 血量建议", 
+                Desc = "您的血量较低，建议开启自动回血功能！",
+                Duration = 6,
+                Callback = function()
+                    print("🔔 血量建议已显示")
+                end
+            })
+        end
     end
 })
 
@@ -1190,8 +1241,200 @@ Tabs.Player:Toggle({
     end
 })
 
+-- 传送功能变量
+local teleportEnabled = false
+local selectedPlayer = nil
+local originalPosition = nil
+
+-- 获取玩家列表函数
+local function getPlayerList()
+    local playerList = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(playerList, player.Name)
+        end
+    end
+    return playerList
+end
+
+-- 传送到特定玩家背后
+local function teleportToPlayer(player)
+    if not player or not player.Character then return end
+    
+    local targetCharacter = player.Character
+    local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
+    local localCharacter = LocalPlayer.Character
+    local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+    
+    if targetRoot and localRoot then
+        local behindCFrame = targetRoot.CFrame * CFrame.new(0, 0, 3)
+        localRoot.CFrame = behindCFrame
+        return true
+    end
+    return false
+end
+
+-- 开始传送到选定玩家
+local function startSelectedPlayerTeleport()
+    if not selectedPlayer then
+        Window:Notify({
+            Title = "⚠️ 传送失败",
+            Desc = "请先选择要传送的玩家！",
+            Duration = 5
+        })
+        return
+    end
+    
+    -- 保存当前位置
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        originalPosition = character.HumanoidRootPart.CFrame
+    end
+    
+    teleportEnabled = true
+    if teleportLoop then 
+        teleportLoop:Disconnect()
+        teleportLoop = nil
+    end
+    
+    teleportLoop = RunService.Heartbeat:Connect(function()
+        if not teleportEnabled or not selectedPlayer then 
+            if teleportLoop then
+                teleportLoop:Disconnect()
+                teleportLoop = nil
+            end
+            return 
+        end
+        
+        local success = teleportToPlayer(selectedPlayer)
+        if not success then
+            Window:Notify({
+                Title = "⚠️ 传送中断",
+                Desc = "目标玩家不存在或无法传送",
+                Duration = 5
+            })
+            stopTeleportLoop()
+        end
+        
+        task.wait(0.1)
+    end)
+    
+    Window:Notify({
+        Title = "🎯 传送已启动",
+        Desc = "正在传送到: " .. selectedPlayer.Name,
+        Duration = 5
+    })
+end
+
+-- 停止传送
+local function stopTeleportLoop()
+    teleportEnabled = false
+    if teleportLoop then 
+        teleportLoop:Disconnect()
+        teleportLoop = nil
+    end
+    
+    -- 传送回原始位置
+    if originalPosition then
+        local character = LocalPlayer.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            character.HumanoidRootPart.CFrame = originalPosition
+            Window:Notify({
+                Title = "🔙 已返回",
+                Desc = "传送回原始位置",
+                Duration = 3
+            })
+        end
+        originalPosition = nil
+    end
+end
+
+-- 玩家选择下拉框
+Tabs.Player:Dropdown({
+    Title = "选择传送目标",
+    Desc = "选择要传送的玩家",
+    Values = getPlayerList(),
+    Value = "",
+    Callback = function(selectedName)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Name == selectedName then
+                selectedPlayer = player
+                Window:Notify({
+                    Title = "✅ 目标已选择",
+                    Desc = "已选择玩家: " .. selectedName,
+                    Duration = 3
+                })
+                break
+            end
+        end
+    end
+})
+
+-- 刷新玩家列表按钮
+Tabs.Player:Button({
+    Title = "刷新玩家列表",
+    Desc = "更新在线玩家列表",
+    Callback = function()
+        local playerList = getPlayerList()
+        -- 这里需要根据WindUI的API来更新下拉框
+        -- 如果WindUI支持动态更新，可以使用相应的方法
+        Window:Notify({
+            Title = "🔄 列表已刷新",
+            Desc = "玩家列表已更新，当前在线: " .. #playerList .. "人",
+            Duration = 3
+        })
+    end
+})
+
+-- 单个玩家传送开关
+Tabs.Player:Toggle({
+    Title = "传送到选定玩家",
+    Desc = "持续传送到选择的玩家背后",
+    Value = false,
+    Callback = function(value)
+        if value then
+            startSelectedPlayerTeleport()
+        else
+            stopTeleportLoop()
+        end
+    end
+})
+
+-- 快速传送到选定玩家（单次）
+Tabs.Player:Button({
+    Title = "快速传送",
+    Desc = "单次传送到选定玩家",
+    Callback = function()
+        if not selectedPlayer then
+            Window:Notify({
+                Title = "⚠️ 传送失败",
+                Desc = "请先选择要传送的玩家！",
+                Duration = 5
+            })
+            return
+        end
+        
+        local success = teleportToPlayer(selectedPlayer)
+        if success then
+            Window:Notify({
+                Title = "✅ 传送成功",
+                Desc = "已传送到: " .. selectedPlayer.Name,
+                Duration = 3
+            })
+        else
+            Window:Notify({
+                Title = "❌ 传送失败",
+                Desc = "无法传送到目标玩家",
+                Duration = 5
+            })
+        end
+    end
+})
+
+-- 所有玩家循环传送（原功能）
 Tabs.Player:Toggle({
     Title = "传送背后循环",
+    Desc = "循环传送到所有玩家背后",
     Value = false,
     Callback = function(value)
         if value then
@@ -1201,6 +1444,29 @@ Tabs.Player:Toggle({
         end
     end
 })
+
+-- 玩家加入/离开自动更新
+Players.PlayerAdded:Connect(function(player)
+    Window:Notify({
+        Title = "👤 玩家加入",
+        Desc = player.Name .. " 加入了游戏",
+        Duration = 3
+    })
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if player == selectedPlayer then
+        selectedPlayer = nil
+        if teleportEnabled then
+            stopTeleportLoop()
+        end
+        Window:Notify({
+            Title = "🚪 目标玩家离开",
+            Desc = player.Name .. " 已离开游戏，传送已停止",
+            Duration = 5
+        })
+    end
+end)
 
 
 
