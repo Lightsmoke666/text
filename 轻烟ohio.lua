@@ -1616,3 +1616,116 @@ Tabs.Fight:Toggle({
         end
     end
 })
+
+
+-- 护甲类型选择
+Tabs.Fight:Dropdown({
+    Title = "选择护甲",
+    Desc = "点一下才会生效",
+    Values = {"轻型护甲100", "重型护甲2000", "军用护甲3500", "EOD护甲7500"},
+    Value = "轻型护甲100",
+    Callback = function(value)
+        if value == "轻型护甲100" then
+            jiahit = "Light Vest"
+        elseif value == "重型护甲2000" then
+            jiahit = "Heavy Vest"
+        elseif value == "军用护甲3500" then
+            jiahit = "Military Vest"
+        elseif value == "EOD护甲7500" then
+            jiahit = "EOD Vest"
+        end
+        print("✅ 选择成功:")
+        print("   选择的护甲类型:", value)
+        print("   设置的jiahit:", jiahit)
+    end
+})
+
+-- 自动穿甲功能
+Tabs.Fight:Toggle({
+    Title = "自动穿甲",
+    Desc = "自动穿戴选择的护甲",
+    Value = false,
+    Callback = function(state)
+        autojia = state
+        if autojia then
+            while autojia and wait() do
+                -- 尝试购买护甲
+                Signal.InvokeServer("attemptPurchase", jiahit)
+                
+                -- 查找并装备护甲
+                for i, v in next, item.inventory.items do
+                    if v.name == jiahit then
+                        local light = v.guid
+                        local armor = LocalPlayer:GetAttribute('armor')
+                        
+                        -- 检查是否需要穿甲（没有护甲或护甲值为0）
+                        if armor == nil or armor <= 0 then
+                            Signal.FireServer("equip", light)
+                            Signal.FireServer("useConsumable", light)
+                            Signal.FireServer("removeItem", light)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+
+-- 自动回血功能
+Tabs.Fight:Toggle({
+    Title = "自动回血",
+    Desc = "使用绷带自动回血",
+    Value = false,
+    Callback = function(state)
+        autolok = state
+        if autolok then
+            while autolok and wait() do
+                -- 尝试购买绷带
+                Signal.InvokeServer("attemptPurchase", 'Bandage')
+                
+                -- 查找并使用绷带
+                for i, v in next, item.inventory.items do
+                    if v.name == 'Bandage' then
+                        local bande = v.guid
+                        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                        local humanoid = character:WaitForChild('Humanoid')
+                        
+                        -- 检查是否需要回血（血量不满）
+                        if humanoid.Health < humanoid.MaxHealth then
+                            Signal.FireServer("equip", bande)
+                            Signal.FireServer("useConsumable", bande)
+                            Signal.FireServer("removeItem", bande)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+
+-- 护甲状态显示（可选功能）
+Tabs.Fight:Button({
+    Title = "检查护甲状态",
+    Desc = "显示当前护甲和血量信息",
+    Callback = function()
+        local armor = LocalPlayer:GetAttribute('armor') or 0
+        local character = LocalPlayer.Character
+        local health = 0
+        local maxHealth = 0
+        
+        if character and character:FindFirstChild("Humanoid") then
+            health = character.Humanoid.Health
+            maxHealth = character.Humanoid.MaxHealth
+        end
+        
+        print("📊 角色状态信息:")
+        print("   当前护甲值:", armor)
+        print("   当前血量:", math.floor(health) .. "/" .. math.floor(maxHealth))
+        print("   选择的护甲类型:", jiahit)
+        
+        -- 可以在UI中显示这些信息
+        -- 或者使用WindUI的通知功能
+    end
+})
