@@ -796,13 +796,12 @@ Tabs.Fight:Button({
             maxHealth = character.Humanoid.MaxHealth
         end
         
-        print("📊 角色状态信息:")
-        print("   当前护甲值:", armor)
-        print("   当前血量:", math.floor(health) .. "/" .. math.floor(maxHealth))
-        print("   选择的护甲类型:", jiahit)
-        
-        -- 可以在UI中显示这些信息
-        -- 或者使用WindUI的通知功能
+        WindUI:Notify({
+                Title = "当前状态信息",
+                Desc = "当前护甲值:, armor,当前血量:, math.floor(health) .. "/" .. math.floor(maxHealth)),选择的护甲类型:, jiahit"
+                Icon = "📊",
+                Duration = 3
+            })
     end
 })
 
@@ -1728,5 +1727,3 @@ Tabs.Fight:Toggle({
     end
 })
 
-
--- 护甲类型选择
