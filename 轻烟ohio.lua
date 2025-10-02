@@ -1264,8 +1264,8 @@ Tabs.ESP:Toggle({
 
 Tabs.ESP:Dropdown({
     Title = "字体大小",
-    Options = {"6", "8", "10", "12", "14", "16"},
-    Default = "8",
+    Values = {"6", "8", "10", "12", "14", "16"},
+    Value = "8",
     Callback = function(value)
         ESPConfig.fontSize = tonumber(value)
         refreshESP()
@@ -1274,8 +1274,8 @@ Tabs.ESP:Dropdown({
 
 Tabs.ESP:Dropdown({
     Title = "字体样式",
-    Options = {"GothamBold", "SourceSansBold", "ArialBold", "Code"},
-    Default = "GothamBold",
+    Values = {"GothamBold", "SourceSansBold", "ArialBold", "Code"},
+    Value = "GothamBold",
     Callback = function(value)
         ESPConfig.fontStyle = Enum.Font[value]
         refreshESP()
@@ -1284,8 +1284,8 @@ Tabs.ESP:Dropdown({
 
 Tabs.ESP:Dropdown({
     Title = "文字颜色",
-    Options = {"红色", "绿色", "蓝色", "黄色", "白色", "紫色"},
-    Default = "红色",
+    Values = {"红色", "绿色", "蓝色", "黄色", "白色", "紫色"},
+    Value = "红色",
     Callback = function(value)
         local colors = {
             ["红色"] = Color3.new(1, 0, 0),
