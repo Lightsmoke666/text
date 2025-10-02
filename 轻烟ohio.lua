@@ -1124,6 +1124,7 @@ local function enableESP()
         local charAddedConn = player.CharacterAdded:Connect(setupCharacter)
         table.insert(playerConnections[player], charAddedConn)
     end
+    
     local function removeNametag(player)
         if playerConnections[player] then
             for _, conn in ipairs(playerConnections[player]) do
@@ -1141,6 +1142,25 @@ local function enableESP()
             end
         end
     end
+    
+    -- 清除所有ESP
+    local function clearAllESP()
+        for _, player in ipairs(Players:GetPlayers()) do
+            removeNametag(player)
+        end
+        table.clear(playerConnections)
+    end
+    
+    -- 刷新ESP
+    local function refreshESP()
+        clearAllESP()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                createNametag(player)
+            end
+        end
+    end
+    
     Players.PlayerAdded:Connect(function(player)
         createNametag(player)
         local leavingConn
@@ -1151,6 +1171,7 @@ local function enableESP()
             end
         end)
     end)
+    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             createNametag(player)
@@ -1169,40 +1190,43 @@ local function enableESP()
         LocalHead = character:WaitForChild("Head")
     end)
     
-    -- 返回颜色设置函数
-    return function(newColor)
-        ESPColor = newColor
-        -- 更新所有现有标签的颜色
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local head = player.Character:FindFirstChild("Head")
-                if head then
-                    local nametag = head:FindFirstChild("PlayerNametag")
-                    if nametag then
-                        local textLabel = nametag:FindFirstChild("TextLabel")
-                        if textLabel then
-                            textLabel.TextColor3 = newColor
+    -- 返回功能函数
+    return {
+        setColor = function(newColor)
+            ESPColor = newColor
+            -- 更新所有现有标签的颜色
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local head = player.Character:FindFirstChild("Head")
+                    if head then
+                        local nametag = head:FindFirstChild("PlayerNametag")
+                        if nametag then
+                            local textLabel = nametag:FindFirstChild("TextLabel")
+                            if textLabel then
+                                textLabel.TextColor3 = newColor
+                            end
                         end
                     end
                 end
             end
-        end
-    end
+        end,
+        refresh = refreshESP,
+        clear = clearAllESP
+    }
 end
 
--- 使用颜色设置
-local setESPColor = enableESP()
+-- 使用功能函数
+local ESPFunctions = enableESP()
 
--- 原有按钮
-Tabs.Player:Button({
+-- ESP标签页按钮
+Tabs.ESP:Button({
     Title = "开启透视ESP",
     Callback = function()
         enableESP()
     end
 })
 
--- 添加颜色选择按钮
-Tabs.Player:Dropdown({
+Tabs.ESP:Dropdown({
     Title = "ESP颜色",
     Values = {"红色", "绿色", "蓝色", "黄色", "白色", "紫色", "青色"},
     Value = "红色",
@@ -1216,8 +1240,26 @@ Tabs.Player:Dropdown({
             ["紫色"] = Color3.new(1, 0, 1),
             ["青色"] = Color3.new(0, 1, 1)
         }
-        if setESPColor then
-            setESPColor(colors[value])
+        if ESPFunctions and ESPFunctions.setColor then
+            ESPFunctions.setColor(colors[value])
+        end
+    end
+})
+
+Tabs.ESP:Button({
+    Title = "刷新ESP",
+    Callback = function()
+        if ESPFunctions and ESPFunctions.refresh then
+            ESPFunctions.refresh()
+        end
+    end
+})
+
+Tabs.ESP:Button({
+    Title = "清除ESP",
+    Callback = function()
+        if ESPFunctions and ESPFunctions.clear then
+            ESPFunctions.clear()
         end
     end
 })
