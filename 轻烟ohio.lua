@@ -1047,6 +1047,7 @@ end)
 setupCharacter()
 
 
+-- 修复后的透视功能
 local function enableESP()
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
@@ -1055,7 +1056,7 @@ local function enableESP()
     local LocalHead = LocalCharacter:WaitForChild("Head")
     local playerConnections = {}
     
-    -- 可自定义的配置变量
+    -- 可自定义的配置变量 - 移到函数内部确保每次调用都有独立配置
     local ESPConfig = {
         enabled = true,
         showName = true,
@@ -1095,6 +1096,11 @@ local function enableESP()
             end
             
             textLabel.Text = table.concat(textParts, "\n")
+            textLabel.TextColor3 = ESPConfig.textColor
+            textLabel.TextSize = ESPConfig.fontSize
+            textLabel.Font = ESPConfig.fontStyle
+            textLabel.BackgroundTransparency = ESPConfig.showBackground and ESPConfig.backgroundTransparency or 1
+            textLabel.BackgroundColor3 = ESPConfig.backgroundColor
             textLabel.Visible = true
         else
             textLabel.Visible = false
@@ -1107,12 +1113,20 @@ local function enableESP()
         
         local function setupCharacter(character)
             local head = character:WaitForChild("Head")
+            
+            -- 先移除已存在的标签
+            local existingNametag = head:FindFirstChild("PlayerNametag")
+            if existingNametag then
+                existingNametag:Destroy()
+            end
+            
             local billboard = Instance.new("BillboardGui")
             billboard.Name = "PlayerNametag"
             billboard.Adornee = head
             billboard.Size = UDim2.new(0, 200, 0, 80)
             billboard.StudsOffset = Vector3.new(0, 3, 0)
             billboard.AlwaysOnTop = true
+            billboard.MaxDistance = 100  -- 最大显示距离
             billboard.Parent = head
             
             local textLabel = Instance.new("TextLabel")
@@ -1139,7 +1153,9 @@ local function enableESP()
             local characterRemovedConn
             characterRemovedConn = character.AncestryChanged:Connect(function(_, parent)
                 if parent == nil then
-                    billboard:Destroy()
+                    if billboard and billboard.Parent then
+                        billboard:Destroy()
+                    end
                     heartbeatConn:Disconnect()
                     characterRemovedConn:Disconnect()
                 end
@@ -1174,9 +1190,14 @@ local function enableESP()
     end
     
     local function refreshAllNametags()
+        -- 先清除所有现有标签
+        for _, player in ipairs(Players:GetPlayers()) do
+            removeNametag(player)
+        end
+        
+        -- 重新创建标签
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
-                removeNametag(player)
                 createNametag(player)
             end
         end
@@ -1193,16 +1214,10 @@ local function enableESP()
         end)
     end)
     
+    -- 为现有玩家创建标签
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             createNametag(player)
-            local leavingConn
-            leavingConn = player.AncestryChanged:Connect(function(_, parent)
-                if parent == nil then
-                    removeNametag(player)
-                    leavingConn:Disconnect()
-                end
-            end)
         end
     end
    
@@ -1211,19 +1226,24 @@ local function enableESP()
         LocalHead = character:WaitForChild("Head")
     end)
     
-    -- 返回配置表，用于外部修改
+    -- 返回配置表和刷新函数
     return ESPConfig, refreshAllNametags
 end
 
--- 使用示例
--- 使用示例
+-- 全局变量来存储ESP配置
 local ESPConfig, refreshESP = enableESP()
 
 -- 添加控制按钮
 Tabs.ESP:Button({
     Title = "开启透视ESP",
     Callback = function()
-        enableESP()
+        -- 重新初始化ESP
+        ESPConfig, refreshESP = enableESP()
+        Window:Notify({
+            Title = "✅ ESP已开启",
+            Desc = "透视功能已激活",
+            Duration = 3
+        })
     end
 })
 
@@ -1231,8 +1251,10 @@ Tabs.ESP:Toggle({
     Title = "显示玩家名称",
     Default = true,
     Callback = function(value)
-        ESPConfig.showName = value
-        refreshESP()
+        if ESPConfig then
+            ESPConfig.showName = value
+            if refreshESP then refreshESP() end
+        end
     end
 })
 
@@ -1240,8 +1262,10 @@ Tabs.ESP:Toggle({
     Title = "显示血量",
     Default = true,
     Callback = function(value)
-        ESPConfig.showHealth = value
-        refreshESP()
+        if ESPConfig then
+            ESPConfig.showHealth = value
+            if refreshESP then refreshESP() end
+        end
     end
 })
 
@@ -1249,8 +1273,10 @@ Tabs.ESP:Toggle({
     Title = "显示距离",
     Default = true,
     Callback = function(value)
-        ESPConfig.showDistance = value
-        refreshESP()
+        if ESPConfig then
+            ESPConfig.showDistance = value
+            if refreshESP then refreshESP() end
+        end
     end
 })
 
@@ -1258,72 +1284,102 @@ Tabs.ESP:Toggle({
     Title = "显示背景",
     Default = false,
     Callback = function(value)
-        ESPConfig.showBackground = value
-        refreshESP()
+        if ESPConfig then
+            ESPConfig.showBackground = value
+            if refreshESP then refreshESP() end
+        end
     end
 })
 
--- 修正下拉菜单 - 使用正确的参数名
 Tabs.ESP:Dropdown({
     Title = "字体大小",
-    Values = {"6", "8", "10", "12", "14", "16"},  -- 保持 Values
-    Value = "8",  -- 保持 Value
+    Values = {"6", "8", "10", "12", "14", "16"},
+    Value = "8",
     Callback = function(value)
-        ESPConfig.fontSize = tonumber(value)
-        refreshESP()
+        if ESPConfig then
+            ESPConfig.fontSize = tonumber(value)
+            if refreshESP then refreshESP() end
+        end
     end
 })
 
 Tabs.ESP:Dropdown({
     Title = "字体样式",
-    Values = {"GothamBold", "SourceSansBold", "ArialBold", "Code"},  -- 保持 Values
-    Value = "GothamBold",  -- 保持 Value
+    Values = {"GothamBold", "SourceSansBold", "ArialBold", "Code"},
+    Value = "GothamBold",
     Callback = function(value)
-        ESPConfig.fontStyle = Enum.Font[value]
-        refreshESP()
+        if ESPConfig then
+            ESPConfig.fontStyle = Enum.Font[value]
+            if refreshESP then refreshESP() end
+        end
     end
 })
 
 Tabs.ESP:Dropdown({
     Title = "文字颜色",
-    Values = {"红色", "绿色", "蓝色", "黄色", "白色", "紫色"},  -- 保持 Values
-    Value = "红色",  -- 保持 Value
+    Values = {"红色", "绿色", "蓝色", "黄色", "白色", "紫色"},
+    Value = "红色",
     Callback = function(value)
-        local colors = {
-            ["红色"] = Color3.new(1, 0, 0),
-            ["绿色"] = Color3.new(0, 1, 0),
-            ["蓝色"] = Color3.new(0, 0, 1),
-            ["黄色"] = Color3.new(1, 1, 0),
-            ["白色"] = Color3.new(1, 1, 1),
-            ["紫色"] = Color3.new(1, 0, 1)
-        }
-        ESPConfig.textColor = colors[value]
-        refreshESP()
+        if ESPConfig then
+            local colors = {
+                ["红色"] = Color3.new(1, 0, 0),
+                ["绿色"] = Color3.new(0, 1, 0),
+                ["蓝色"] = Color3.new(0, 0, 1),
+                ["黄色"] = Color3.new(1, 1, 0),
+                ["白色"] = Color3.new(1, 1, 1),
+                ["紫色"] = Color3.new(1, 0, 1)
+            }
+            ESPConfig.textColor = colors[value]
+            if refreshESP then refreshESP() end
+        end
     end
 })
 
 Tabs.ESP:Button({
     Title = "刷新ESP",
     Callback = function()
-        refreshESP()
+        if refreshESP then 
+            refreshESP()
+            Window:Notify({
+                Title = "🔄 ESP已刷新",
+                Desc = "所有标签已更新",
+                Duration = 3
+            })
+        end
     end
 })
 
 Tabs.ESP:Button({
     Title = "关闭ESP",
     Callback = function()
-        ESPConfig.enabled = false
-        refreshESP()
+        if ESPConfig then
+            ESPConfig.enabled = false
+            if refreshESP then refreshESP() end
+            Window:Notify({
+                Title = "❌ ESP已关闭",
+                Desc = "透视功能已禁用",
+                Duration = 3
+            })
+        end
     end
 })
 
 Tabs.ESP:Button({
     Title = "开启ESP",
     Callback = function()
-        ESPConfig.enabled = true
-        refreshESP()
+        if ESPConfig then
+            ESPConfig.enabled = true
+            if refreshESP then refreshESP() end
+            Window:Notify({
+                Title = "✅ ESP已开启",
+                Desc = "透视功能已激活",
+                Duration = 3
+            })
+        end
     end
 })
+
+
 Tabs.Player:Input({
     Title = "速度设置",
     Default = "1",
