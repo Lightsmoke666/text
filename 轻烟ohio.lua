@@ -1216,6 +1216,7 @@ local function enableESP()
 end
 
 -- 使用示例
+-- 使用示例
 local ESPConfig, refreshESP = enableESP()
 
 -- 添加控制按钮
@@ -1262,10 +1263,11 @@ Tabs.ESP:Toggle({
     end
 })
 
+-- 修正下拉菜单 - 使用正确的参数名
 Tabs.ESP:Dropdown({
     Title = "字体大小",
-    Values = {"6", "8", "10", "12", "14", "16"},
-    Value = "8",
+    Values = {"6", "8", "10", "12", "14", "16"},  -- 保持 Values
+    Value = "8",  -- 保持 Value
     Callback = function(value)
         ESPConfig.fontSize = tonumber(value)
         refreshESP()
@@ -1274,8 +1276,8 @@ Tabs.ESP:Dropdown({
 
 Tabs.ESP:Dropdown({
     Title = "字体样式",
-    Values = {"GothamBold", "SourceSansBold", "ArialBold", "Code"},
-    Value = "GothamBold",
+    Values = {"GothamBold", "SourceSansBold", "ArialBold", "Code"},  -- 保持 Values
+    Value = "GothamBold",  -- 保持 Value
     Callback = function(value)
         ESPConfig.fontStyle = Enum.Font[value]
         refreshESP()
@@ -1284,8 +1286,8 @@ Tabs.ESP:Dropdown({
 
 Tabs.ESP:Dropdown({
     Title = "文字颜色",
-    Values = {"红色", "绿色", "蓝色", "黄色", "白色", "紫色"},
-    Value = "红色",
+    Values = {"红色", "绿色", "蓝色", "黄色", "白色", "紫色"},  -- 保持 Values
+    Value = "红色",  -- 保持 Value
     Callback = function(value)
         local colors = {
             ["红色"] = Color3.new(1, 0, 0),
@@ -1322,7 +1324,6 @@ Tabs.ESP:Button({
         refreshESP()
     end
 })
-
 Tabs.Player:Input({
     Title = "速度设置",
     Default = "1",
